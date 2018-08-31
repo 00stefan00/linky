@@ -73,9 +73,9 @@ class LinkyPlugin(Plugin):
             if event.raw_data['message']['channel_id'] != url_input_channel_id:
                 return
 
-    urls = self.get_urls(event.message.content)
-    # Return if there are no valid URLS found
-    if len(urls) < 1:
+        urls = self.get_urls(event.message.content)
+        # Return if there are no valid URLS found
+        if len(urls) < 1:
             return
         if self.has_outputchannel(self.get_server_id(event)):
             url_output_channel_id = int(jsonstorage.get(self.get_server_id(event), Constants.url_output_channel.fget()))
