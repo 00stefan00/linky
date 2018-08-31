@@ -22,10 +22,23 @@ class LinkyPlugin(Plugin):
         helptext += "```"
         event.msg.reply(helptext)
 
+    @Plugin.command('!adminonlycontrol')
+    def command_set_adminonlycontrol(self, event):
+        if not self.is_allowed(event):
+            return
+        value = event.msg.content.split('!adminonlycontrol')[1].lower().strip()
+        if value in ['true', 'false']:
+            jsonstorage.add(self.get_server_id(event), Constants.adminonlycontrol.fget(), value)
+            event.msg.reply('Admin-only-control set to: {}'.format(value))
+        else:
+            event.msg.reply('Received: {}, only accepts true/false'.format(value))
+
     @Plugin.command('!urlinputchannel')
     def command_set_urlinputchannel(self, event):
+        if not self.is_allowed(event):
+            return
         if '#' in event.msg.content:
-            value = event.msg.content.split('#')[1][:-1]
+            value = re.sub("[^0-9]", " ", event.msg.content.split('#')[1]).split(' ')[0]
             if self.is_valid_server_channel_id(value):
             	jsonstorage.add(self.get_server_id(event), Constants.listen_channel.fget(), value)
             	event.msg.reply('Listening to channel: {}'.format(self.get_channel_name(value)))
@@ -36,8 +49,10 @@ class LinkyPlugin(Plugin):
 
     @Plugin.command('!urloutputchannel')
     def command_set_urloutputchannel(self, event):
+        if not self.is_allowed(event):
+            return
         if '#' in event.msg.content:
-            value = event.msg.content.split('#')[1][:-1]
+            value = re.sub("[^0-9]", " ", event.msg.content.split('#')[1]).split(' ')[0]
             if self.is_valid_server_channel_id(value):
                 jsonstorage.add(self.get_server_id(event), Constants.response_channel.fget(), value)
                 event.msg.reply('Set {} as outputchannel'.format(self.get_channel_name(value)))
@@ -91,6 +106,25 @@ class LinkyPlugin(Plugin):
 
     def is_bot(self, event):
         return (self.bot.client.state.me.id == int(event.raw_data['message']['author']['id']))
+
+    def is_allowed(self, event):
+        if self.is_admin_only_control(self.get_server_id(event)) and not self.is_admin(event):
+            event.msg.reply('Sorry, you lack the required permissions to program my behaviour')
+            return False
+        return True
+
+    def is_admin(self, event):
+        return event.member.permissions.to_dict()['administrator']
+
+    def is_admin_only_control(self, server_id):
+        try:
+            value = jsonstorage.get(server_id, Constants.adminonlycontrol.fget())
+        except:
+            value = None
+        if value in ['True', 'true']:
+            return True
+        else:
+            return False
 
     def has_listenchannel(self, server_id):
         try:

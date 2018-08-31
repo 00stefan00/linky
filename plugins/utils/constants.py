@@ -5,3 +5,6 @@ class Constants(object):
     @property
     def response_channel():
         return "response_channel"
+    @property
+    def adminonlycontrol():
+        return "admin_only"
