@@ -88,7 +88,7 @@ class LinkyPlugin(Plugin):
         return event._guild.id
 
     def get_urls(self, msg):
-        urls = re.findall('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', msg)
+        urls = re.findall(r'(https?://\S+)', msg)
         return urls
 
     def get_server_channel_list(self):
