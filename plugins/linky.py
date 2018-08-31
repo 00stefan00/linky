@@ -52,12 +52,15 @@ class LinkyPlugin(Plugin):
 
         if self.is_bot(event):
             return
+        if self.has_listenchannel(self.get_server_id(event)):
+            listen_channel_id = jsonstorage.get(self.get_server_id(event), Constants.listen_channel.fget())
+            if event.raw_data['message']['channel_id'] != listen_channel_id:
+                return
 
 	urls = self.get_urls(event.message.content)
 	# Return if there are no valid URLS found
 	if len(urls) < 1:
             return
-
         if self.has_responsechannel(self.get_server_id(event)):
             response_channel_id = int(jsonstorage.get(self.get_server_id(event), Constants.response_channel.fget()))
             response_channel = self.bot.client.state.channels.get(response_channel_id)
