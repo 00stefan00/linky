@@ -12,8 +12,18 @@ class LinkyPlugin(Plugin):
     def initialize(self, event):
         pass
 
-    @Plugin.command('!listenchannel')
-    def command_set_listenchannel(self, event):
+    @Plugin.command('!help')
+    def help(self, event):
+        helptext = "``` \n"
+        helptext += "!help output: \n"
+        helptext += "@linky !urlinputchannel #channelname to set which channel should be scanned for URLS \n"
+        helptext += "@linky !urloutputchannel #channelname to set which channel should be used to output scanned URLS \n"
+
+        helptext += "```"
+        event.msg.reply(helptext)
+
+    @Plugin.command('!urlinputchannel')
+    def command_set_urlinputchannel(self, event):
         if '#' in event.msg.content:
             value = event.msg.content.split('#')[1][:-1]
             if self.is_valid_server_channel_id(value):
@@ -24,8 +34,8 @@ class LinkyPlugin(Plugin):
         else:
             event.msg.reply('No channel detected')
 
-    @Plugin.command('!responsechannel')
-    def command_set_responsechannel(self, event):
+    @Plugin.command('!urloutputchannel')
+    def command_set_urloutputchannel(self, event):
         if '#' in event.msg.content:
             value = event.msg.content.split('#')[1][:-1]
             if self.is_valid_server_channel_id(value):
