@@ -17,8 +17,8 @@ class LinkyPlugin(Plugin):
         if '#' in event.msg.content:
             value = event.msg.content.split('#')[1][:-1]
             if self.is_valid_server_channel_id(value):
-            	jsonstorage.add(self.get_server_id(event), Constants.listen_channel, value)
-            	event.msg.reply('Listening to channel: {} with id: {}'.format(self.get_channel_name(value), value))
+            	jsonstorage.add(self.get_server_id(event), Constants.listen_channel.fget(), value)
+            	event.msg.reply('Listening to channel: {}'.format(self.get_channel_name(value)))
             else:
                 event.msg.reply('Channel-name not recognized')
         else:
@@ -27,10 +27,12 @@ class LinkyPlugin(Plugin):
     @Plugin.command('!responsechannel')
     def command_set_responsechannel(self, event):
         if '#' in event.msg.content:
-            value = event.msg.content.split('#')[1]
-            # todo: check if channel exists self.bot.client.state.channels.values()
-            jsonstorage.add(self.get_server_id(event), Constants.response_channel, value)
-            event.msg.reply('Listening to channel: {} with id: {}'.format(value, value))
+            value = event.msg.content.split('#')[1][:-1]
+            if self.is_valid_server_channel_id(value):
+                jsonstorage.add(self.get_server_id(event), Constants.response_channel.fget(), value)
+                event.msg.reply('Set {} as responsechannel'.format(self.get_channel_name(value)))
+            else:
+                event.msg.reply('Channel-name not recognized')
         else:
             event.msg.reply('No channel detected')
 
@@ -47,12 +49,9 @@ class LinkyPlugin(Plugin):
             return
 
         if self.has_responsechannel(self.get_server_id(event)):
-            response_channel = self.bot.client.state.channels.get(jsonstorage.get(self.get_server_id(event), Constants.response_channel))
-
-        if self.has_responsechannel(self.get_server_id(event)):
-            response_channel = self.bot.client.state.channels.get(jsonstorage.get(self.get_server_id(event), Constants.response_channel))
-
-            if response_channel in self.get_server_channel_list():
+            response_channel_id = int(jsonstorage.get(self.get_server_id(event), Constants.response_channel.fget()))
+            response_channel = self.bot.client.state.channels.get(response_channel_id)
+            if self.is_valid_server_channel_id(response_channel_id):
                 for url in urls:
                     response_channel.send_message(url)
         else:
@@ -82,14 +81,14 @@ class LinkyPlugin(Plugin):
 
     def has_listenchannel(self, server_id):
         try:
-            channel = jsonstorage.get(server_id, Constants.listen_channel)
+            channel = jsonstorage.get(server_id, Constants.listen_channel.fget())
             return True
         except Exception:
             return False
 
     def has_responsechannel(self, server_id):
         try:
-            channel = jsonstorage.get(server_id, Constants.response_channel)
+            channel = jsonstorage.get(server_id, Constants.response_channel.fget())
             return True
         except Exception:
             return False
