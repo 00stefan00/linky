@@ -16,6 +16,7 @@ class LinkyPlugin(Plugin):
         helptext += "!help output: \n"
         helptext += "@linky !urlinputchannel #channelname to set which channel should be scanned for URLS \n"
         helptext += "@linky !urloutputchannel #channelname to set which channel should be used to output scanned URLS \n"
+        helptext += "@linky !adminonlycontrol true/false to allow or disallow non-admin members of the discord to use @linky !commands \n"
 
         helptext += "```"
         event.msg.reply(helptext)
