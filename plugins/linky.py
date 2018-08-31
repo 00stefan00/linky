@@ -5,8 +5,6 @@ from utils.constants import Constants
 
 import re
 import pdb
-# python -m disco.cli --config config.json
-# https://discordapp.com/oauth2/authorize?&client_id=484777422638546955&scope=bot&permissions=220224
 
 class LinkyPlugin(Plugin):
     def initialize(self, event):
