@@ -40,7 +40,7 @@ class LinkyPlugin(Plugin):
             value = event.msg.content.split('#')[1][:-1]
             if self.is_valid_server_channel_id(value):
                 jsonstorage.add(self.get_server_id(event), Constants.response_channel.fget(), value)
-                event.msg.reply('Set {} as responsechannel'.format(self.get_channel_name(value)))
+                event.msg.reply('Set {} as outputchannel'.format(self.get_channel_name(value)))
             else:
                 event.msg.reply('Channel-name not recognized')
         else:
