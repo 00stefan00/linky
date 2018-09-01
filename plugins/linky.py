@@ -137,7 +137,7 @@ class LinkyPlugin(Plugin):
         return False
 
     def get_stripped_domain(self, url):
-        return url.split("//")[-1].split("/")[0].split("www.")[1]   
+        return url.split("//")[-1].split("/")[0].split("www.")[-1]   
 
     def get_server_channel_list(self):
         return self.bot.client.state.channels.values()
