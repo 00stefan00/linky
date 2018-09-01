@@ -16,10 +16,13 @@ class LinkyPlugin(Plugin):
     def help(self, event):
         helptext = "``` \n"
         helptext += "!help output: \n"
-        helptext += "@linky !urlinputchannel #channelname to set which channel should be scanned for URLS \n"
-        helptext += "@linky !urloutputchannel #channelname to set which channel should be used to output scanned URLS \n"
-        helptext += "@linky !adminonlycontrol true/false to allow or disallow non-admin members of the discord to use @linky !commands \n"
-
+        helptext +=" \n"
+        helptext += "@linky !urlinputchannel #channelname | to set which channel should be scanned for URLS \n"
+        helptext += "@linky !urloutputchannel #channelname | to set which channel should be used to output scanned URLS \n"
+        helptext += "@linky !adminonlycontrol true/false | to allow or disallow non-admin members of the discord to use @linky !commands \n"
+        helptext +=" @linky !domainblacklistadd <name> <url> | will set a certain domain to not be posted in the outputchannel\n"
+        helptext +=" @linky !domainblacklistremove <name> | will remove a certain domain that is grouped with that name from the blacklist \n"
+        helptext +=" @linky !domainblacklistshow | will show the current blacklist \n"
         helptext += "```"
         event.msg.reply(helptext)
 
@@ -62,6 +65,38 @@ class LinkyPlugin(Plugin):
         else:
             event.msg.reply('No channel detected')
 
+    @Plugin.command('!domainblacklistshow')
+    def command_set_domainblacklistshow(self, event):
+        if not self.is_allowed(event):
+            return
+        blacklist = jsonstorage.get(self.get_server_id(event), Constants.blacklisted_domains.fget())
+        event.msg.reply("Blacklist: {}".format(blacklist.items()))
+
+    @Plugin.command('!domainblacklistadd')
+    def command_set_domainblacklistadd(self, event):
+        if not self.is_allowed(event):
+            return
+        details = event.msg.content.split("!domainblacklistadd")[1].strip()
+        name = details.split(" ")[0]
+        urls = self.get_urls(details.split(" ")[1])
+        if (len(urls) < 1):
+            event.msg.reply("No URL found")
+            return
+        if not self.has_blacklisted_domains(self.get_server_id(event)):
+            jsonstorage.initialize_dict(self.get_server_id(event), Constants.blacklisted_domains.fget())
+        url = self.get_stripped_domain(urls[0])
+        jsonstorage.add_to_dict(self.get_server_id(event), Constants.blacklisted_domains.fget(), name, url)
+        event.msg.reply("Added to the blacklist: {} with domain: {}".format(name, url))
+
+    @Plugin.command('!domainblacklistremove')
+    def command_set_domainblacklistremove(self, event):
+        if not self.is_allowed(event):
+            return
+        details = event.msg.content.split("!domainblacklistremove")[1].strip()
+        name = details.split(" ")[0]
+        jsonstorage.remove_from_dict(self.get_server_id(event), Constants.blacklisted_domains.fget(), str(name))
+        event.msg.reply("Removed from the blacklist: {}".format(name))
+
     @Plugin.listen('MessageCreate')
     def on_message_create(self, event):
         self.initialize(event)
@@ -82,7 +117,8 @@ class LinkyPlugin(Plugin):
             url_output_channel = self.bot.client.state.channels.get(url_output_channel_id)
             if self.is_valid_server_channel_id(url_output_channel_id):
                 for url in urls:
-                    url_output_channel.send_message(url)
+                    if not self.url_is_blacklisted(self.get_server_id(event), url):
+                        url_output_channel.send_message(url)
         else:
             event.reply("No outputchannel has been set")
 
@@ -92,6 +128,16 @@ class LinkyPlugin(Plugin):
     def get_urls(self, msg):
         urls = re.findall(r'(https?://\S+)', msg)
         return urls
+
+    def url_is_blacklisted(self, server_id, url):
+        blacklist = jsonstorage.get(server_id, Constants.blacklisted_domains.fget()).items()
+        for entry in blacklist:
+            if self.get_stripped_domain(entry[1]) == self.get_stripped_domain(url):
+                return True
+        return False
+
+    def get_stripped_domain(self, url):
+        return url.split("//")[-1].split("/")[0].split("www.")[1]   
 
     def get_server_channel_list(self):
         return self.bot.client.state.channels.values()
@@ -138,5 +184,12 @@ class LinkyPlugin(Plugin):
         try:
             channel = jsonstorage.get(server_id, Constants.url_output_channel.fget())
             return True
+        except Exception:
+            return False
+
+    def has_blacklisted_domains(self, server_id):
+        try:
+            blacklist = jsonstorage.get(server_id, Constants.blacklisted_domains.fget())
+            return True 
         except Exception:
             return False
