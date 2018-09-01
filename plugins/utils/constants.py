@@ -11,3 +11,7 @@ class Constants(object):
     @property
     def migration_version():
         return "migration_version"    
+    @property
+    def blacklisted_domains():
+        return "blacklisted_domains"
+    
