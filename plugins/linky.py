@@ -3,6 +3,7 @@ from disco.bot import Bot, Plugin
 from utils import jsonstorage
 from utils.constants import Constants
 from utils.migrationhelper import MigrationHelper
+from utils.validation import Validator
 
 import re
 import pdb
@@ -17,12 +18,18 @@ class LinkyPlugin(Plugin):
         helptext = "``` \n"
         helptext += "!help output: \n"
         helptext +=" \n"
-        helptext += "@linky !urlinputchannel #channelname | to set which channel should be scanned for URLS \n"
-        helptext += "@linky !urloutputchannel #channelname | to set which channel should be used to output scanned URLS \n"
+        helptext += "@linky !urlinputchannel #channel | to set which channel should be scanned for URLS \n"
+        helptext += "@linky !urloutputchannel #channel | to set which channel should be used to output scanned URLS \n"
         helptext += "@linky !adminonlycontrol true/false | to allow or disallow non-admin members of the discord to use @linky !commands \n"
-        helptext +=" @linky !domainblacklistadd <name> <url> | will set a certain domain to not be posted in the outputchannel\n"
-        helptext +=" @linky !domainblacklistremove <name> | will remove a certain domain that is grouped with that name from the blacklist \n"
-        helptext +=" @linky !domainblacklistshow | will show the current blacklist \n"
+        helptext +=" \n"       
+        helptext += "@linky !domainblacklistadd <name> <url> | will set a certain domain to not be posted in the outputchannel\n"
+        helptext += "@linky !domainblacklistremove <name> | will remove a certain domain that is grouped with that name from the blacklist \n"
+        helptext += "@linky !domainblacklistshow | will show the current blacklist \n"
+        helptext +=" \n"
+        helptext += "@linky !ytvideochannel #channel | to set which channel should be used for posting youtube videos"
+        helptext += "@linky !ytsubscriptionlistshow <name> <channelid> | will subscribe a certain youtube channel to be monitored for new videos\n"
+        helptext += "@linky !ytsubscriptionadd <name> | will unsubscribe from named youtube channel \n"
+        helptext += "@linky !ytsubscriptionremove | will show the current subscriptionlist \n"
         helptext += "```"
         event.msg.reply(helptext)
 
@@ -39,7 +46,7 @@ class LinkyPlugin(Plugin):
 
     @Plugin.command('!urlinputchannel')
     def command_set_urlinputchannel(self, event):
-        if not self.is_allowed(event):
+        if not Validator(self).is_allowed(event):
             return
         if '#' in event.msg.content:
             value = re.sub("[^0-9]", " ", event.msg.content.split('#')[1]).split(' ')[0]
@@ -53,7 +60,7 @@ class LinkyPlugin(Plugin):
 
     @Plugin.command('!urloutputchannel')
     def command_set_urloutputchannel(self, event):
-        if not self.is_allowed(event):
+        if not Validator(self).is_allowed(event):
             return
         if '#' in event.msg.content:
             value = re.sub("[^0-9]", " ", event.msg.content.split('#')[1]).split(' ')[0]
@@ -67,14 +74,14 @@ class LinkyPlugin(Plugin):
 
     @Plugin.command('!domainblacklistshow')
     def command_set_domainblacklistshow(self, event):
-        if not self.is_allowed(event):
+        if not Validator(self).is_allowed(event):
             return
         blacklist = jsonstorage.get(self.get_server_id(event), Constants.blacklisted_domains.fget())
         event.msg.reply("Blacklist: {}".format(blacklist.items()))
 
     @Plugin.command('!domainblacklistadd')
     def command_set_domainblacklistadd(self, event):
-        if not self.is_allowed(event):
+        if not Validator(self).is_allowed(event):
             return
         details = event.msg.content.split("!domainblacklistadd")[1].strip()
         name = details.split(" ")[0]
@@ -90,7 +97,7 @@ class LinkyPlugin(Plugin):
 
     @Plugin.command('!domainblacklistremove')
     def command_set_domainblacklistremove(self, event):
-        if not self.is_allowed(event):
+        if not Validator(self).is_allowed(event):
             return
         details = event.msg.content.split("!domainblacklistremove")[1].strip()
         name = details.split(" ")[0]
@@ -101,7 +108,7 @@ class LinkyPlugin(Plugin):
     def on_message_create(self, event):
         self.initialize(event)
 
-        if self.is_bot(event):
+        if Validator(self).is_bot(event):
             return
         if self.has_inputchannel(self.get_server_id(event)):
             url_input_channel_id = jsonstorage.get(self.get_server_id(event), Constants.url_input_channel.fget())
@@ -150,28 +157,6 @@ class LinkyPlugin(Plugin):
             if channel.id == int(channel_id):
                 return '#{}'.format(channel.name)
         return ''
-
-    def is_bot(self, event):
-        return (self.bot.client.state.me.id == int(event.raw_data['message']['author']['id']))
-
-    def is_allowed(self, event):
-        if self.is_admin_only_control(self.get_server_id(event)) and not self.is_admin(event):
-            event.msg.reply('Sorry, you lack the required permissions to program my behaviour')
-            return False
-        return True
-
-    def is_admin(self, event):
-        return event.member.permissions.to_dict()['administrator']
-
-    def is_admin_only_control(self, server_id):
-        try:
-            value = jsonstorage.get(server_id, Constants.adminonlycontrol.fget())
-        except:
-            value = None
-        if value in ['True', 'true']:
-            return True
-        else:
-            return False
 
     def has_inputchannel(self, server_id):
         try:

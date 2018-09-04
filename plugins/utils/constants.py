@@ -14,4 +14,9 @@ class Constants(object):
     @property
     def blacklisted_domains():
         return "blacklisted_domains"
-    
+    @property
+    def yt_subs():
+        return "youtube_subscriptions"
+    @property
+    def yt_channel():
+        return "youtube_channel"

@@ -1,8 +1,10 @@
 {
     "token": ""
+    "yt_api_key": "",
     "bot": {
         "plugins": [
-            "plugins.linky"
+            "plugins.linky",
+            "plugins.yt-linky"
         ]
     }
 }
