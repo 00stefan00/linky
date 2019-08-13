@@ -1,0 +1,5 @@
+A list of suggested features that can be worked out.
+
+- Anti duplicates: Blocks duplicate entries from being logged, preferably with configurable timefrime in which to look for duplicates. Example: 1 week
+
+- Ignore Link Feature: Allowing for adding a certain keyword to result in the bot ignoring the rest of the message. This would prevent links from being logged if they're posted after the keyword
