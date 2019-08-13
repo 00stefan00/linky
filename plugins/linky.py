@@ -126,7 +126,7 @@ class LinkyPlugin(Plugin):
         return event._guild.id
 
     def get_urls(self, msg):
-        urls = re.findall(r'(https?://\S+)', msg)
+        urls = [a or b for a, b in re.findall(r'(?:<(https?://\S+)>)|(https?://\S+)', msg)]
         return urls
 
     def url_is_blacklisted(self, server_id, url):
