@@ -126,9 +126,6 @@ class LinkyPlugin(Plugin):
         return event._guild.id
 
     def get_urls(self, msg):
-        """Finds URLs in the provided message, and ignores any message starting with !ignore"""
-        if msg.startswith("!ignore"):
-            return []
         urls = [a or b for a, b in re.findall(r'(?:<(https?://\S+)>)|(https?://\S+)', msg)]
         return urls
 
