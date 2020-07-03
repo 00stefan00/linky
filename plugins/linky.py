@@ -4,13 +4,22 @@ from utils import jsonstorage
 from utils.constants import Constants
 from utils.migrationhelper import MigrationHelper
 
+import asyncio
 import re
 import pdb
+
+try:
+    import nest_asyncio
+except ImportError:
+    sys.exit("Module is missing: nest_asyncio! Install it from http://pypi.python.org/pypi/nest_asyncio or run `pip install nest_asyncio`.")
 
 class LinkyPlugin(Plugin):
     def initialize(self, event):
         migrationhelper = MigrationHelper(self.get_server_id(event))
         migrationhelper.check_for_updates()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        nest_asyncio.apply()
 
     @Plugin.command('!help')
     def help(self, event):
@@ -19,6 +28,7 @@ class LinkyPlugin(Plugin):
         helptext +=" \n"
         helptext += "@linky !urlinputchannel #channelname | to set which channel should be scanned for URLS \n"
         helptext += "@linky !urloutputchannel #channelname | to set which channel should be used to output scanned URLS \n"
+        helptext += "@linky !linkonlychannel #channelname | to set which channel should be used used as a link-only channel, deleting all user messages without URLs \n"
         helptext += "@linky !adminonlycontrol true/false | to allow or disallow non-admin members of the discord to use @linky !commands \n"
         helptext +=" @linky !domainblacklistadd <name> <url> | will set a certain domain to not be posted in the outputchannel\n"
         helptext +=" @linky !domainblacklistremove <name> | will remove a certain domain that is grouped with that name from the blacklist \n"
@@ -63,6 +73,20 @@ class LinkyPlugin(Plugin):
             else:
                 event.msg.reply('Channel-name not recognized')
         else:
+                event.msg.reply('No channel detected')
+
+    @Plugin.command('!linkonlychannel')
+    def command_set_linkonlychannel(self, event):
+        if not self.is_allowed(event):
+            return
+        if '#' in event.msg.content:
+            value = re.sub("[^0-9]", " ", event.msg.content.split('#')[1]).split(' ')[0]
+            if self.is_valid_server_channel_id(value):
+                jsonstorage.add(self.get_server_id(event), Constants.linkonly_channel.fget(), value)
+                event.msg.reply('Set {} as link-only channel'.format(self.get_channel_name(value)))
+            else:
+                event.msg.reply('Channel-name not recognized')
+        else:
             event.msg.reply('No channel detected')
 
     @Plugin.command('!domainblacklistshow')
@@ -103,24 +127,60 @@ class LinkyPlugin(Plugin):
 
         if self.is_bot(event):
             return
-        if self.has_inputchannel(self.get_server_id(event)):
-            url_input_channel_id = jsonstorage.get(self.get_server_id(event), Constants.url_input_channel.fget())
-            if event.raw_data['message']['channel_id'] != url_input_channel_id:
-                return
 
+        # Handle URL input->output channels
+        if self.has_inputchannel(self.get_server_id(event)):
+            asyncio.run(self.handle_url_input_channel(event))
+
+        # Handle link-only channels
+        if self.has_linkonlychannel(self.get_server_id(event)):
+            asyncio.run(self.handle_linkonly_channel(event))
+
+    async def handle_url_input_channel(self, event):
+        channel_id = event.raw_data['message']['channel_id']
         urls = self.get_urls(event.message.content)
-        # Return if there are no valid URLS found
-        if len(urls) < 1:
+        url_input_channel_id = jsonstorage.get(self.get_server_id(event), Constants.url_input_channel.fget())
+
+        if channel_id != url_input_channel_id:
             return
-        if self.has_outputchannel(self.get_server_id(event)):
-            url_output_channel_id = int(jsonstorage.get(self.get_server_id(event), Constants.url_output_channel.fget()))
-            url_output_channel = self.bot.client.state.channels.get(url_output_channel_id)
-            if self.is_valid_server_channel_id(url_output_channel_id):
-                for url in urls:
-                    if not self.url_is_blacklisted(self.get_server_id(event), url):
-                        url_output_channel.send_message(url)
-        else:
+
+        # Return if there are valid URLS found
+        if len(urls) == 0:
+            return
+
+        # Check if output channel is set
+        if not self.has_outputchannel(self.get_server_id(event)):
             event.reply("No outputchannel has been set")
+            return
+
+        url_output_channel_id = int(jsonstorage.get(self.get_server_id(event), Constants.url_output_channel.fget()))
+        url_output_channel = self.bot.client.state.channels.get(url_output_channel_id)
+
+        # Do not handle invalid channel
+        if not self.is_valid_server_channel_id(url_output_channel_id):
+            return
+
+        for url in urls:
+            if not self.url_is_blacklisted(self.get_server_id(event), url):
+                url_output_channel.send_message(url)
+
+    async def handle_linkonly_channel(self, event):
+        channel_id = event.raw_data['message']['channel_id'] 
+        urls = self.get_urls(event.message.content)
+        linkonly_channel_id = jsonstorage.get(self.get_server_id(event), Constants.linkonly_channel.fget())
+
+        if channel_id != linkonly_channel_id:
+            return
+
+        # Return if there are URLS found or the message is from a moderator.
+        if len(urls) > 0: #or self.is_msg_moderator(event):
+            return
+
+        # Wait a minute before deleting the message
+        await asyncio.sleep(5)
+
+        # Delete the non-link, non-moderator message since this is link-only channel
+        event.message.delete()
 
     def get_server_id(self, event):
         return event._guild.id
@@ -166,6 +226,9 @@ class LinkyPlugin(Plugin):
     def is_admin(self, event):
         return event.member.permissions.to_dict()['administrator']
 
+    def is_msg_moderator(self, event):
+        return event.member.permissions.to_dict()['manage_messages']
+
     def is_admin_only_control(self, server_id):
         try:
             value = jsonstorage.get(server_id, Constants.adminonlycontrol.fget())
@@ -186,6 +249,13 @@ class LinkyPlugin(Plugin):
     def has_outputchannel(self, server_id):
         try:
             channel = jsonstorage.get(server_id, Constants.url_output_channel.fget())
+            return True
+        except Exception:
+            return False
+
+    def has_linkonlychannel(self, server_id):
+        try:
+            channel = jsonstorage.get(server_id, Constants.linkonly_channel.fget())
             return True
         except Exception:
             return False

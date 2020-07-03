@@ -1,6 +1,5 @@
-import jsonstorage
-from constants import Constants
-
+from utils.constants import Constants
+import utils.jsonstorage as jsonstorage
 
 REQUIRED_VERSION = 1 
 
@@ -14,7 +13,7 @@ class MigrationHelper:
 
     def check_for_updates(self):
         while self.current_version < REQUIRED_VERSION:
-            print "update from {} to {}".format(self.current_version, REQUIRED_VERSION)
+            print ("update from {} to {}".format(self.current_version, REQUIRED_VERSION))
             self.current_version += 1
             if self.current_version == 1:
                 self.update_one()

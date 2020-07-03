@@ -6,6 +6,9 @@ class Constants(object):
     def url_output_channel():
         return "url_output_channel"
     @property
+    def linkonly_channel():
+        return "linkonly_channel"
+    @property
     def adminonlycontrol():
         return "admin_only"
     @property
